@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # LAYER: DATA STORAGE
+  mongodb:
+    image: mongo:latest
+    container_name: big_data_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo_data:/data/db
+
+  # LAYER: PROCESSING (Spark Master)
+  spark-master:
+    image: apache/spark:3.5.0
+    container_name: big_data_spark_master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8080:8080" # Web UI
+      - "7077:7077" # Master Port
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
+
+  # LAYER: PROCESSING (Spark Worker)
+  spark-worker:
+    image: apache/spark:3.5.0
+    container_name: big_data_spark_worker
+    environment:
+      - SPARK_MODE=worker
+    depends_on:
+      - spark-master
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
+
+  # LAYER: DATA OUTPUT & INTERFACE (Jupyter)
+  jupyter:
+    image: jupyter/pyspark-notebook:latest
+    container_name: big_data_jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    depends_on:
+      - spark-master
