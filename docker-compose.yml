@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # LAYER: DATA STORAGE
@@ -19,7 +19,8 @@ services:
     ports:
       - "8080:8080" # Web UI
       - "7077:7077" # Master Port
-    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
+    command:
+      ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
 
   # LAYER: PROCESSING (Spark Worker)
   spark-worker:
@@ -29,17 +30,36 @@ services:
       - SPARK_MODE=worker
     depends_on:
       - spark-master
-    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
+    command:
+      [
+        "/opt/spark/bin/spark-class",
+        "org.apache.spark.deploy.worker.Worker",
+        "spark://spark-master:7077",
+      ]
 
   # LAYER: DATA OUTPUT & INTERFACE (Jupyter)
   jupyter:
-    image: jupyter/pyspark-notebook:latest
+    build:
+      context: ./jupyter
+    image: weatheranddelay-jupyter:latest
     container_name: big_data_jupyter
     ports:
       - "8888:8888"
+      - "8000:8000"
     volumes:
       - ./notebooks:/home/jovyan/work
+      - ./api:/home/jovyan/api
     environment:
       - JUPYTER_ENABLE_LAB=yes
+      - WL_BASE_URL=https://www.wienerlinien.at/ogd_realtime/
+      - WL_TIMEOUT=30
+      - WL_USER_AGENT=WeatherAndDelay/1.0
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_DB=big_data_austria
+      - MONGO_COLLECTION=wienerlinien_realtime
+      - FETCH_ENABLED=true
+      - FETCH_INTERVAL=30
+      - FETCH_ENDPOINT=monitor
+      - FETCH_RBLS=147,148
     depends_on:
       - spark-master
