@@ -1,4 +1,5 @@
-FROM jupyter/pyspark-notebook:latest
+ARG JUPYTER_IMAGE=jupyter/pyspark-notebook:latest
+FROM ${JUPYTER_IMAGE}
 
 USER root
 COPY requirements.txt /tmp/requirements.txt

@@ -12,27 +12,40 @@ services:
 
   # LAYER: PROCESSING (Spark Master)
   spark-master:
-    image: apache/spark:3.5.0
+    image: weatheranddelay-jupyter:latest
     container_name: big_data_spark_master
     environment:
       - SPARK_MODE=master
+      - PYSPARK_PYTHON=/opt/conda/bin/python
+      - SPARK_WORKER_DIR=/home/jovyan/spark-work
+      - SPARK_LOCAL_DIRS=/home/jovyan/spark-local
     ports:
       - "8080:8080" # Web UI
       - "7077:7077" # Master Port
+    volumes:
+      - ./notebooks:/home/jovyan/work
     command:
-      ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
+      [
+        "/usr/local/spark/bin/spark-class",
+        "org.apache.spark.deploy.master.Master",
+      ]
 
   # LAYER: PROCESSING (Spark Worker)
   spark-worker:
-    image: apache/spark:3.5.0
+    image: weatheranddelay-jupyter:latest
     container_name: big_data_spark_worker
     environment:
       - SPARK_MODE=worker
+      - PYSPARK_PYTHON=/opt/conda/bin/python
+      - SPARK_WORKER_DIR=/home/jovyan/spark-work
+      - SPARK_LOCAL_DIRS=/home/jovyan/spark-local
     depends_on:
       - spark-master
+    volumes:
+      - ./notebooks:/home/jovyan/work
     command:
       [
-        "/opt/spark/bin/spark-class",
+        "/usr/local/spark/bin/spark-class",
         "org.apache.spark.deploy.worker.Worker",
         "spark://spark-master:7077",
       ]
@@ -54,6 +67,9 @@ services:
       - WL_BASE_URL=https://www.wienerlinien.at/ogd_realtime/
       - WL_TIMEOUT=30
       - WL_USER_AGENT=WeatherAndDelay/1.0
+      - SPARK_MASTER=spark://spark-master:7077
+      - PYSPARK_PYTHON=/opt/conda/bin/python
+      - PYSPARK_DRIVER_PYTHON=/opt/conda/bin/python
       - MONGO_URI=mongodb://mongodb:27017
       - MONGO_DB=big_data_austria
       - MONGO_COLLECTION=wienerlinien_realtime
